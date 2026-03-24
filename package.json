@@ -1,0 +1,22 @@
+{
+  "name": "life-simulation",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.165.0",
+    "codemirror": "^6.0.1",
+    "@codemirror/view": "^6.28.3",
+    "@codemirror/state": "^6.4.1",
+    "@codemirror/lang-javascript": "^6.2.2",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "chart.js": "^4.4.4"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}

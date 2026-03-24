@@ -1,0 +1,413 @@
+/* ─── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  background: #0a0a1a;
+  color: #ccc;
+}
+
+/* ─── Layout ───────────────────────────────────────────────── */
+#app {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+#sidebar {
+  width: 300px;
+  min-width: 260px;
+  max-width: 340px;
+  background: #0d0d1f;
+  border-right: 1px solid #1e1e3a;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+}
+
+#viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+
+#viewport canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+#stats-panel {
+  width: 260px;
+  min-width: 220px;
+  background: #0d0d1f;
+  border-left: 1px solid #1e1e3a;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* ─── Sidebar Sections ─────────────────────────────────────── */
+.sidebar-section {
+  padding: 12px;
+  border-bottom: 1px solid #1a1a2e;
+}
+
+.sidebar-section h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #667;
+  margin-bottom: 10px;
+}
+
+/* ─── Control Rows ─────────────────────────────────────────── */
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.control-row label {
+  color: #aab;
+  white-space: nowrap;
+  min-width: 80px;
+  font-size: 12px;
+}
+
+.control-row input[type="text"],
+.control-row input[type="number"],
+.control-row select {
+  flex: 1;
+  background: #15152a;
+  border: 1px solid #2a2a4a;
+  color: #dde;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.control-row input[type="color"] {
+  width: 40px;
+  height: 26px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+}
+
+/* ─── Slider Rows ──────────────────────────────────────────── */
+.slider-row {
+  margin-bottom: 8px;
+}
+
+.slider-row label {
+  display: block;
+  color: #99a;
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+.slider-row input[type="range"] {
+  width: calc(100% - 38px);
+  accent-color: #44aaff;
+  vertical-align: middle;
+}
+
+.slider-value {
+  display: inline-block;
+  width: 34px;
+  text-align: right;
+  color: #adf;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────── */
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+button {
+  cursor: pointer;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  padding: 6px 12px;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.btn-primary {
+  background: #1a4a88;
+  border-color: #2a6ab8;
+  color: #cdf;
+  flex: 1;
+}
+
+.btn-primary:hover { background: #245aaa; }
+
+.btn-secondary {
+  background: #2a1a1a;
+  border-color: #5a2a2a;
+  color: #dcc;
+  flex: 1;
+}
+
+.btn-secondary:hover { background: #3a2020; }
+
+/* ─── Species Tabs ─────────────────────────────────────────── */
+.species-tabs-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  background: #111122;
+  border: 1px solid #222240;
+  color: #888;
+  padding: 5px 10px;
+  font-size: 11px;
+  border-radius: 4px 4px 0 0;
+  border-bottom: 3px solid transparent;
+  transition: color 0.1s, background 0.1s;
+}
+
+.tab-btn.active {
+  background: #16162e;
+  color: #dde;
+}
+
+.tab-btn:hover { color: #bbd; }
+
+.tab-panels {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ─── Code Editor ──────────────────────────────────────────── */
+.editor-container {
+  margin-top: 8px;
+  border: 1px solid #1e1e3a;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.editor-placeholder {
+  padding: 12px;
+  color: #556;
+  font-size: 12px;
+}
+
+.editor-container .cm-editor {
+  max-height: 260px;
+  font-size: 12px;
+}
+
+.apply-behavior-btn {
+  width: 100%;
+  background: #112211;
+  border: 1px solid #224422;
+  color: #6d6;
+  padding: 6px;
+  border-radius: 0 0 4px 4px;
+  font-size: 12px;
+}
+
+.apply-behavior-btn:hover { background: #1a3a1a; }
+
+.editor-msg {
+  padding: 5px 10px;
+  font-size: 11px;
+  border-radius: 3px;
+  margin: 4px;
+}
+
+.editor-msg.success { background: #112211; color: #6f6; border: 1px solid #224; }
+.editor-msg.error   { background: #221111; color: #f66; border: 1px solid #422; }
+
+/* ─── Stats Panel ──────────────────────────────────────────── */
+#stats-panel h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #667;
+  margin-bottom: 4px;
+}
+
+#population-chart-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+#population-chart-wrap canvas {
+  width: 100% !important;
+}
+
+#stats-display {
+  font-size: 12px;
+  color: #99a;
+  line-height: 1.8;
+}
+
+#stats-display .stat-line {
+  display: flex;
+  justify-content: space-between;
+}
+
+#stats-display .stat-val {
+  color: #ccf;
+  font-variant-numeric: tabular-nums;
+}
+
+.species-count-list {
+  margin-top: 6px;
+}
+
+.species-count-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.species-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ─── Mobile toolbar (hidden on desktop) ───────────────────── */
+#mobile-toolbar {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: rgba(10, 10, 26, 0.95);
+  border-bottom: 1px solid #1e1e3a;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 16px;
+  gap: 8px;
+  z-index: 100;
+}
+
+#mobile-toolbar button {
+  flex: 1;
+  padding: 8px;
+  font-size: 13px;
+  background: #151528;
+  border-color: #2a2a4a;
+  color: #aac;
+}
+
+/* ─── Bottom Sheet (hidden on desktop) ─────────────────────── */
+#bottom-sheet {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #0d0d1f;
+  border-top: 1px solid #1e1e3a;
+  border-radius: 12px 12px 0 0;
+  z-index: 90;
+  transition: height 0.3s ease;
+  overflow: hidden;
+}
+
+#bottom-sheet[data-state="collapsed"] { height: 32px; }
+#bottom-sheet[data-state="half"]      { height: 40vh; overflow-y: auto; }
+#bottom-sheet[data-state="full"]      { height: 90vh; overflow-y: auto; }
+
+.sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: #334;
+  border-radius: 2px;
+  margin: 10px auto 6px;
+  cursor: pointer;
+}
+
+.sheet-content {
+  padding: 8px 12px 16px;
+}
+
+/* ─── Mobile Responsive ────────────────────────────────────── */
+@media (max-width: 1023px) {
+  #sidebar {
+    display: none;
+  }
+
+  #stats-panel {
+    display: none;
+    position: fixed;
+    top: 48px;
+    right: 0;
+    bottom: 0;
+    width: 260px;
+    z-index: 80;
+    border-left: 1px solid #1e1e3a;
+  }
+
+  #stats-panel.mobile-visible {
+    display: flex;
+  }
+
+  #viewport {
+    position: fixed;
+    top: 48px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
+  #mobile-toolbar {
+    display: flex;
+  }
+
+  #bottom-sheet {
+    display: block;
+  }
+}
+
+/* ─── Scrollbar ────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #0a0a1a; }
+::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 3px; }
