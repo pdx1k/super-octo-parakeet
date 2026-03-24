@@ -11,8 +11,8 @@ export const DEFAULT_BEHAVIOR_SOURCE = `function behavior(self, nearby, dt) {
     }
   }
 
-  // Gather nearest resource if hungry
-  if (self.energy < self.stats.reproductionThreshold * 0.6 && nearby.resources.length > 0) {
+  // Gather nearest resource if below reproduction threshold
+  if (self.energy < self.stats.reproductionThreshold * 0.85 && nearby.resources.length > 0) {
     const res = nearby.resources[0];
     if (res.distance <= self.stats.attackRange) {
       return { type: 'gather', targetId: res.id };
@@ -30,13 +30,13 @@ export const DEFAULT_BEHAVIOR_SOURCE = `function behavior(self, nearby, dt) {
     return { type: 'move', target: enemies[0].position };
   }
 
-  // Wander randomly
+  // Wander using persistent per-creature angle that drifts each update
   return {
     type: 'wander',
     direction: {
-      x: Math.sin(self.age * 0.05 + self.speciesId) + (Math.random() - 0.5) * 0.4,
-      y: (Math.random() - 0.5) * 0.1,
-      z: Math.cos(self.age * 0.05 + self.speciesId) + (Math.random() - 0.5) * 0.4,
+      x: Math.cos(self.wanderAngle),
+      y: 0,
+      z: Math.sin(self.wanderAngle),
     },
   };
 }`;

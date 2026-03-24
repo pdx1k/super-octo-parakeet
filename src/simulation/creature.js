@@ -36,6 +36,7 @@ export class Creature {
     this.energy = species.config.reproductionThreshold * 0.5;
     this.health = 100;
     this.age = 0;
+    this._wanderAngle = Math.random() * Math.PI * 2;
     this.pendingAction = null;
     this._indexInSpecies = -1; // for instanced mesh tracking
 
@@ -52,6 +53,7 @@ export class Creature {
       speciesId: this.species.id,
       position: { ...this.position },
       velocity: { ...this.velocity },
+      wanderAngle: this._wanderAngle,
       energy: this.energy,
       health: this.health,
       age: this.age,

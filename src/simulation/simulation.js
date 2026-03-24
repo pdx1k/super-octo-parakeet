@@ -250,6 +250,8 @@ export class Simulation {
 
   _actionWander(creature, dir, dt) {
     if (!dir) return;
+    // Drift the persistent wander angle for next call
+    creature._wanderAngle += (Math.random() - 0.5) * 0.35;
     const len = Math.sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
     if (len < 0.001) return;
     const inv = 1 / len;
