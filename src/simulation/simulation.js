@@ -121,16 +121,14 @@ export class Simulation {
   }
 
   _runBehaviors(dt) {
+    const batch = this.tick % BEHAVIOR_UPDATE_INTERVAL;
+    let idx = 0;
     for (const creature of this.creatures.values()) {
-      // Round-robin: not every creature recalculates every tick
-      if ((creature._behaviorAge ?? 0) % BEHAVIOR_UPDATE_INTERVAL !== this.tick % BEHAVIOR_UPDATE_INTERVAL) {
-        creature._behaviorAge = (creature._behaviorAge ?? 0) + 1;
-        continue;
+      if (idx % BEHAVIOR_UPDATE_INTERVAL === batch) {
+        const nearby = this._getPerception(creature);
+        creature.pendingAction = creature.species.runBehavior(creature.state, nearby, dt);
       }
-      creature._behaviorAge = (creature._behaviorAge ?? 0) + 1;
-
-      const nearby = this._getPerception(creature);
-      creature.pendingAction = creature.species.runBehavior(creature.state, nearby, dt);
+      idx++;
     }
   }
 

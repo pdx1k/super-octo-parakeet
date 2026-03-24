@@ -13,17 +13,18 @@ export class BottomSheet {
 
   _setupHandle() {
     const handle = this.el.querySelector('.sheet-handle');
-    if (!handle) return;
-    handle.addEventListener('touchstart', (e) => {
+    if (handle) {
+      handle.addEventListener('click', () => this._advance());
+    }
+    // Swipe anywhere on the sheet
+    this.el.addEventListener('touchstart', (e) => {
       this._startY = e.touches[0].clientY;
     }, { passive: true });
-    handle.addEventListener('touchend', (e) => {
+    this.el.addEventListener('touchend', (e) => {
       const delta = this._startY - e.changedTouches[0].clientY;
       if (delta > 40) this._advance();
       else if (delta < -40) this._retreat();
     }, { passive: true });
-    // Click cycles through states on non-touch
-    handle.addEventListener('click', () => this._advance());
   }
 
   _advance() {
@@ -58,7 +59,7 @@ export function initMobileUI(simulation, species, onStartPause) {
 
   if (btnSpecies) {
     btnSpecies.addEventListener('click', () => {
-      bs.setState('half');
+      bs.setState(bs.state === 'collapsed' ? 'half' : 'collapsed');
     });
   }
 
