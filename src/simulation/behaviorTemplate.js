@@ -30,13 +30,21 @@ export const DEFAULT_BEHAVIOR_SOURCE = `function behavior(self, nearby, dt) {
     return { type: 'move', target: enemies[0].position };
   }
 
-  // Wander using persistent per-creature angle that drifts each update
+  // Wander in the tangent plane of the sphere at the creature's position
+  const r = Math.sqrt(self.position.x**2 + self.position.y**2 + self.position.z**2) || 1;
+  const nx = self.position.x / r, ny = self.position.y / r, nz = self.position.z / r;
+  // Build two orthonormal tangent vectors (e1, e2) at this point on the sphere
+  const refX = Math.abs(ny) < 0.9 ? 0 : 1, refY = Math.abs(ny) < 0.9 ? 1 : 0, refZ = 0;
+  const t1x = refY * nz - refZ * ny, t1y = refZ * nx - refX * nz, t1z = refX * ny - refY * nx;
+  const t1len = Math.sqrt(t1x**2 + t1y**2 + t1z**2);
+  const e1x = t1x / t1len, e1y = t1y / t1len, e1z = t1z / t1len;
+  const e2x = ny * e1z - nz * e1y, e2y = nz * e1x - nx * e1z, e2z = nx * e1y - ny * e1x;
   return {
     type: 'wander',
     direction: {
-      x: Math.cos(self.wanderAngle),
-      y: 0,
-      z: Math.sin(self.wanderAngle),
+      x: Math.cos(self.wanderAngle) * e1x + Math.sin(self.wanderAngle) * e2x,
+      y: Math.cos(self.wanderAngle) * e1y + Math.sin(self.wanderAngle) * e2y,
+      z: Math.cos(self.wanderAngle) * e1z + Math.sin(self.wanderAngle) * e2z,
     },
   };
 }`;
