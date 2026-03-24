@@ -96,9 +96,20 @@ function boot() {
     });
   }
 
+  // Move species tabs into bottom sheet for mobile
+  if (isMobile()) {
+    const sheetContent = document.getElementById('sheet-content');
+    const speciesSection = document.querySelector('.species-tabs-section');
+    if (sheetContent && speciesSection) {
+      sheetContent.appendChild(speciesSection);
+    }
+  }
+
   // Auto-start
   simulation.start();
   controls.setStartBtnText('Pause');
+  const mobileStartBtn = document.getElementById('btn-start');
+  if (mobileStartBtn) mobileStartBtn.textContent = 'Pause';
 }
 
 function updateStatsDisplay(snapshot, species) {
