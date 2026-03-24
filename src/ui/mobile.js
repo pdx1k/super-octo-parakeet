@@ -59,7 +59,13 @@ export function initMobileUI(simulation, species, onStartPause) {
 
   if (btnSpecies) {
     btnSpecies.addEventListener('click', () => {
-      bs.setState(bs.state === 'collapsed' ? 'half' : 'collapsed');
+      const panel = document.getElementById('stats-panel');
+      if (bs.state !== 'collapsed') {
+        bs.setState('collapsed');
+      } else {
+        if (panel) panel.classList.remove('mobile-visible');
+        bs.setState('full');
+      }
     });
   }
 
@@ -73,7 +79,11 @@ export function initMobileUI(simulation, species, onStartPause) {
   if (btnStats) {
     btnStats.addEventListener('click', () => {
       const panel = document.getElementById('stats-panel');
-      if (panel) panel.classList.toggle('mobile-visible');
+      if (panel) {
+        const willShow = !panel.classList.contains('mobile-visible');
+        if (willShow) bs.setState('collapsed');
+        panel.classList.toggle('mobile-visible');
+      }
     });
   }
 
