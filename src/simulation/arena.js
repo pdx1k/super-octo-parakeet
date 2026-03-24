@@ -45,27 +45,29 @@ export class Arena {
   }
 
   _buildArena() {
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(this.size * 2, this.size * 2),
-      new THREE.MeshPhongMaterial({ color: 0x0d1a0d, shininess: 5 })
+    // Solid planet sphere — creatures walk on its surface
+    const planet = new THREE.Mesh(
+      new THREE.SphereGeometry(this.size, 64, 32),
+      new THREE.MeshPhongMaterial({
+        color: 0x1a3a1a,
+        shininess: 8,
+        specular: 0x224422,
+      })
     );
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    this.scene.add(floor);
+    planet.receiveShadow = true;
+    this.scene.add(planet);
 
-    const grid = new THREE.GridHelper(this.size * 2, 20, 0x1a3a1a, 0x112211);
-    this.scene.add(grid);
-
-    const boundary = new THREE.Mesh(
-      new THREE.SphereGeometry(this.size, 32, 16),
+    // Faint wireframe overlay for depth cues
+    const overlay = new THREE.Mesh(
+      new THREE.SphereGeometry(this.size * 1.001, 32, 16),
       new THREE.MeshBasicMaterial({
-        color: 0x224422,
+        color: 0x336633,
         wireframe: true,
-        opacity: 0.1,
+        opacity: 0.08,
         transparent: true,
       })
     );
-    this.scene.add(boundary);
+    this.scene.add(overlay);
   }
 
   _setupResize() {

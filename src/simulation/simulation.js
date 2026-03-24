@@ -48,13 +48,13 @@ export class Simulation {
     // Spawn starting creatures per species
     for (const species of this.species) {
       for (let i = 0; i < this.options.startingCreatures; i++) {
-        this._spawnCreature(species, this._randomPosOnFloor());
+        this._spawnCreature(species, this._randomOnSphere());
       }
     }
 
     // Spawn resources
     for (let i = 0; i < this.options.resourceCount; i++) {
-      this._createResource(this._randomPosOnFloor());
+      this._createResource(this._randomOnSphere());
     }
   }
 
@@ -238,25 +238,47 @@ export class Simulation {
     const dz = target.z - creature.position.z;
     const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
     if (dist < 0.5) return;
+    // Project direction onto tangent plane of sphere
+    const r = this.arena.size;
+    const nx = creature.position.x / r;
+    const ny = creature.position.y / r;
+    const nz = creature.position.z / r;
+    const dot = dx * nx + dy * ny + dz * nz;
+    const tx = dx - dot * nx;
+    const ty = dy - dot * ny;
+    const tz = dz - dot * nz;
+    const tlen = Math.sqrt(tx * tx + ty * ty + tz * tz);
+    if (tlen < 0.001) return;
     const speed = creature.species.config.moveSpeed;
     const step = Math.min(speed * dt, dist);
-    const inv = step / dist;
-    creature.position.x += dx * inv;
-    creature.position.y = Math.max(0, creature.position.y + dy * inv);
-    creature.position.z += dz * inv;
+    const inv = step / tlen;
+    creature.position.x += tx * inv;
+    creature.position.y += ty * inv;
+    creature.position.z += tz * inv;
     this._clampToArena(creature);
     this.grid.update(creature.id, creature.position);
   }
 
   _actionWander(creature, dir, dt) {
     if (!dir) return;
-    const len = Math.sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
-    if (len < 0.001) return;
-    const inv = 1 / len;
+    // Drift the persistent wander angle for next call
+    creature._wanderAngle += (Math.random() - 0.5) * 0.35;
+    // Project wander direction onto tangent plane of sphere
+    const r = this.arena.size;
+    const nx = creature.position.x / r;
+    const ny = creature.position.y / r;
+    const nz = creature.position.z / r;
+    const dot = dir.x * nx + dir.y * ny + dir.z * nz;
+    const tx = dir.x - dot * nx;
+    const ty = dir.y - dot * ny;
+    const tz = dir.z - dot * nz;
+    const tlen = Math.sqrt(tx * tx + ty * ty + tz * tz);
+    if (tlen < 0.001) return;
     const speed = creature.species.config.moveSpeed;
-    creature.position.x += dir.x * inv * speed * dt;
-    creature.position.y = Math.max(0, creature.position.y + dir.y * inv * speed * dt);
-    creature.position.z += dir.z * inv * speed * dt;
+    const inv = speed * dt / tlen;
+    creature.position.x += tx * inv;
+    creature.position.y += ty * inv;
+    creature.position.z += tz * inv;
     this._clampToArena(creature);
     this.grid.update(creature.id, creature.position);
   }
@@ -283,14 +305,15 @@ export class Simulation {
     const res = this.resources.get(resourceId);
     if (!res || res.depleted) return;
     const dx = res.position.x - creature.position.x;
+    const dy = res.position.y - creature.position.y;
     const dz = res.position.z - creature.position.z;
-    const dist = Math.sqrt(dx * dx + dz * dz);
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
     if (dist > creature.species.config.attackRange * 1.5) return;
     const gained = res.gather(creature.species.config.gatherEfficiency);
     creature.energy = Math.min(200, creature.energy + gained);
     if (res.depleted) {
       this.resourceGrid.remove(res.id);
-      res.respawn(this._randomPosOnFloor(), this.options.resourceRespawnDelay);
+      res.respawn(this._randomOnSphere(), this.options.resourceRespawnDelay);
     }
   }
 
@@ -300,7 +323,7 @@ export class Simulation {
     const offset = () => (Math.random() - 0.5) * 4;
     const childPos = {
       x: creature.position.x + offset(),
-      y: 0,
+      y: creature.position.y + offset(),
       z: creature.position.z + offset(),
     };
     this._clampPosToArena(childPos);
@@ -311,15 +334,15 @@ export class Simulation {
     this._clampPosToArena(creature.position);
   }
 
+  // Project position onto sphere surface
   _clampPosToArena(pos) {
-    const r = this.arena.size * 0.95;
-    const dist = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
-    if (dist > r) {
-      const inv = r / dist;
-      pos.x *= inv;
-      pos.z *= inv;
-    }
-    pos.y = 0;
+    const r = this.arena.size;
+    const dist = Math.sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
+    if (dist < 0.001) { pos.x = r; pos.y = 0; pos.z = 0; return; }
+    const scale = r / dist;
+    pos.x *= scale;
+    pos.y *= scale;
+    pos.z *= scale;
   }
 
   _updateMeshes() {
@@ -348,11 +371,16 @@ export class Simulation {
     return res;
   }
 
-  _randomPosOnFloor() {
-    const r = this.arena.size * 0.9;
-    const angle = Math.random() * Math.PI * 2;
-    const radius = Math.sqrt(Math.random()) * r;
-    return { x: Math.cos(angle) * radius, y: 0, z: Math.sin(angle) * radius };
+  _randomOnSphere() {
+    // Uniform random point on sphere surface
+    const u = Math.random() * Math.PI * 2;
+    const v = Math.acos(2 * Math.random() - 1);
+    const r = this.arena.size;
+    return {
+      x: r * Math.sin(v) * Math.cos(u),
+      y: r * Math.cos(v),
+      z: r * Math.sin(v) * Math.sin(u),
+    };
   }
 
   _emitSnapshot() {
