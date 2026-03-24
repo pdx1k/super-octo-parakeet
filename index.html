@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>3D Life Simulation</title>
+  <script type="module" crossorigin src="./assets/index-CPSFwpRD.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/three-B7mAsoSm.js">
+  <link rel="modulepreload" crossorigin href="./assets/codemirror-BBKjYeBJ.js">
+  <link rel="stylesheet" crossorigin href="./assets/index-4yyvxKa-.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- Left sidebar: controls -->
+    <aside id="sidebar" aria-label="Species Controls"></aside>
+
+    <!-- Centre: Three.js canvas -->
+    <main id="viewport">
+      <canvas id="three-canvas"></canvas>
+    </main>
+
+    <!-- Right panel: stats -->
+    <aside id="stats-panel" aria-label="Statistics">
+      <h3>Population</h3>
+      <div id="population-chart-wrap" style="flex:1;min-height:0;position:relative;">
+        <canvas id="population-chart"></canvas>
+      </div>
+
+      <div id="stats-display">
+        <div class="stat-line">
+          <span>Tick</span>
+          <span class="stat-val" id="stat-tick">0</span>
+        </div>
+        <div class="stat-line">
+          <span>Total</span>
+          <span class="stat-val" id="stat-total">0</span>
+        </div>
+        <div class="stat-line">
+          <span>FPS</span>
+          <span class="stat-val" id="stat-fps">—</span>
+        </div>
+        <div class="species-count-list"></div>
+      </div>
+    </aside>
+
+    <!-- Mobile bottom sheet -->
+    <div id="bottom-sheet" data-state="collapsed">
+      <div class="sheet-handle" role="button" aria-label="Expand controls" tabindex="0"></div>
+      <div class="sheet-content" id="sheet-content"></div>
+    </div>
+
+    <!-- Mobile toolbar -->
+    <nav id="mobile-toolbar" aria-label="Simulation controls">
+      <button id="btn-species">Species</button>
+      <button id="btn-start">Start</button>
+      <button id="btn-stats">Stats</button>
+    </nav>
+
+  </div>
+
+</body>
+</html>
