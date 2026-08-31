@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<title>Lichen</title>
+<meta name="description" content="An incremental game about growing lichen on a boulder, one epoch at a time." />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#E9E5DA" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#15170F" media="(prefers-color-scheme: dark)" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Karla:ital,wght@0,400;0,500;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+<style>
+/* ── tokens ─────────────────────────────────────────────── */
+:root{
+  --stone-0:#F2EFE4; --stone-1:#E6E2D4; --stone-2:#D6D2C2; --stone-3:#BEBBAA;
+  --ink:#23261F; --ink-soft:#5A5F50; --ink-faint:#8C907C;
+  --line:#C9C5B3;
+  --accent:#7C8A16;      /* map lichen, darkened for light ground */
+  --accent-ink:#FBFBF4;
+  --accent-soft:#EDEFCD;
+  --warm:#B4611A;        /* xanthoria */
+  --rock-a:#CFCCC0; --rock-b:#A9A79A; --rock-line:#8E8C80;
+  --panel:#FBF9F1; --panel-2:#F1EEE2;
+  --shadow:0 1px 0 rgba(35,38,31,.06), 0 6px 18px -12px rgba(35,38,31,.5);
+  --r:12px;
+  --f-display:"Young Serif",Georgia,"Times New Roman",serif;
+  --f-ui:"Karla",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --stone-0:#15170F; --stone-1:#1C1F17; --stone-2:#262A20; --stone-3:#39402F;
+    --ink:#EDEBDD; --ink-soft:#A7AC96; --ink-faint:#767B67;
+    --line:#333828;
+    --accent:#C3D137; --accent-ink:#191C11; --accent-soft:#2A3018;
+    --warm:#E2892C;
+    --rock-a:#4A4F3F; --rock-b:#2C3126; --rock-line:#5E6450;
+    --panel:#1B1E16; --panel-2:#22261C;
+    --shadow:0 1px 0 rgba(0,0,0,.3), 0 8px 22px -14px #000;
+  }
+}
+:root[data-theme="dark"]{
+  --stone-0:#15170F; --stone-1:#1C1F17; --stone-2:#262A20; --stone-3:#39402F;
+  --ink:#EDEBDD; --ink-soft:#A7AC96; --ink-faint:#767B67;
+  --line:#333828;
+  --accent:#C3D137; --accent-ink:#191C11; --accent-soft:#2A3018;
+  --warm:#E2892C;
+  --rock-a:#4A4F3F; --rock-b:#2C3126; --rock-line:#5E6450;
+  --panel:#1B1E16; --panel-2:#22261C;
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 8px 22px -14px #000;
+}
+
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{
+  margin:0; background:var(--stone-0); color:var(--ink);
+  font-family:var(--f-ui); font-size:15px; line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none;
+}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* ── shell ──────────────────────────────────────────────── */
+#app{
+  display:flex; flex-direction:column;
+  height:100svh; max-width:520px; margin:0 auto;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow:hidden;
+}
+.topbar{
+  display:flex; align-items:baseline; gap:10px;
+  padding:10px 16px 2px;
+}
+.wordmark{
+  font-family:var(--f-display); font-size:17px; letter-spacing:.01em;
+}
+.wordmark em{font-style:normal;color:var(--accent)}
+.epoch{
+  margin-left:auto; font-family:var(--f-num); font-size:11px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint);
+}
+.epoch b{color:var(--warm);font-weight:600}
+
+/* readout */
+.readout{padding:2px 16px 8px}
+.biomass{
+  font-family:var(--f-num); font-weight:500; font-variant-numeric:tabular-nums;
+  font-size:clamp(34px,11vw,46px); line-height:1.05; letter-spacing:-.02em;
+  display:flex; align-items:baseline; gap:8px;
+}
+.biomass small{font-size:13px;font-weight:400;color:var(--ink-faint);letter-spacing:.06em;text-transform:uppercase;font-family:var(--f-ui)}
+.rate{
+  font-family:var(--f-num); font-size:13px; color:var(--ink-soft);
+  font-variant-numeric:tabular-nums;
+}
+.rate b{color:var(--accent);font-weight:600}
+
+/* rock */
+.rockwrap{
+  position:relative; flex:1 1 34%; min-height:150px; margin:0 12px;
+  border-radius:var(--r); overflow:hidden;
+  background:var(--panel-2); border:1px solid var(--line);
+  touch-action:manipulation; user-select:none; -webkit-user-select:none;
+}
+#rock{display:block;width:100%;height:100%}
+.hint{
+  position:absolute; left:50%; transform:translateX(-50%); bottom:8px;
+  font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft);
+  background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:3px 10px;
+  pointer-events:none; transition:opacity .4s; white-space:nowrap;
+}
+.float{
+  position:absolute; pointer-events:none; font-family:var(--f-num); font-weight:600;
+  font-size:14px; color:var(--accent); text-shadow:0 1px 3px var(--stone-0);
+  animation:rise 900ms cubic-bezier(.2,.7,.3,1) forwards;
+}
+@keyframes rise{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,-46px)}}
+
+/* coverage */
+.coverage{display:flex;align-items:center;gap:10px;padding:8px 16px 4px}
+.coverage span{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap}
+.bar{flex:1;height:4px;border-radius:2px;background:var(--stone-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .5s ease}
+.coverage b{font-family:var(--f-num);font-size:11px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+
+/* tabs */
+.tabs{display:flex;gap:2px;padding:8px 12px 6px}
+.tabs button{
+  flex:1; padding:8px 4px; border-radius:8px; font-size:13px; font-weight:700;
+  letter-spacing:.02em; color:var(--ink-faint); position:relative;
+}
+.tabs button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent)}
+.tabs button .dot{
+  position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;
+  background:var(--warm); display:none;
+}
+.tabs button.has-new .dot{display:block}
+
+/* panels */
+.panels{flex:1 1 42%;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 16px}
+.panel[hidden]{display:none}
+.buymode{display:flex;gap:4px;padding:0 0 8px;justify-content:flex-end;align-items:center}
+.buymode em{margin-right:auto;font-style:normal;font-size:12px;color:var(--ink-faint);letter-spacing:.06em;text-transform:uppercase}
+.buymode button{
+  font-family:var(--f-num);font-size:12px;padding:4px 10px;border-radius:6px;
+  border:1px solid var(--line);color:var(--ink-soft);
+}
+.buymode button[aria-pressed="true"]{background:var(--ink);color:var(--stone-0);border-color:var(--ink)}
+
+.card{
+  width:100%; display:grid; grid-template-columns:34px 1fr auto; gap:10px;
+  align-items:center; text-align:left;
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
+  padding:10px 12px; margin-bottom:8px; box-shadow:var(--shadow);
+  transition:transform .09s ease, opacity .2s;
+}
+.card:active{transform:scale(.985)}
+.card[disabled]{opacity:.5;box-shadow:none}
+.card .swatch{
+  width:34px;height:34px;border-radius:9px;position:relative;overflow:hidden;
+  background:var(--stone-2);
+}
+.card .swatch i{position:absolute;border-radius:50%;opacity:.9}
+.card h3{margin:0;font-family:var(--f-display);font-size:15px;font-weight:400;line-height:1.2}
+.card p{margin:1px 0 0;font-size:12px;color:var(--ink-faint);line-height:1.3}
+.card p.latin{font-style:italic}
+.card .right{text-align:right;display:flex;flex-direction:column;gap:1px;align-items:flex-end}
+.card .cost{font-family:var(--f-num);font-size:13px;font-weight:500;font-variant-numeric:tabular-nums}
+.card.can .cost{color:var(--accent)}
+.card .own{font-family:var(--f-num);font-size:11px;color:var(--ink-faint)}
+.card .own b{color:var(--ink-soft);font-weight:600}
+.tag{
+  display:inline-block;font-family:var(--f-num);font-size:10px;letter-spacing:.04em;
+  padding:1px 5px;border-radius:4px;background:var(--accent-soft);color:var(--accent);margin-top:3px;
+}
+.tag.warm{background:transparent;color:var(--warm);border:1px solid var(--warm)}
+
+.empty{padding:28px 14px;text-align:center;color:var(--ink-faint);font-size:13px}
+.empty em{font-family:var(--f-display);font-style:normal;display:block;font-size:15px;color:var(--ink-soft);margin-bottom:6px}
+
+/* glacier panel */
+.glacier{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
+.glacier h2{font-family:var(--f-display);font-weight:400;font-size:20px;margin:0 0 6px}
+.glacier p{margin:0 0 12px;font-size:13px;color:var(--ink-soft);max-width:46ch}
+.rings{display:flex;gap:16px;margin:14px 0;font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.rings div{flex:1}
+.rings span{display:block;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);font-family:var(--f-ui)}
+.rings b{font-size:22px;font-weight:500}
+.rings b.gain{color:var(--warm)}
+.scour{
+  width:100%;padding:13px;border-radius:10px;background:var(--accent);color:var(--accent-ink);
+  font-weight:700;letter-spacing:.02em;font-size:15px;
+}
+.scour[disabled]{background:var(--stone-2);color:var(--ink-faint);cursor:default}
+.wipe{display:block;margin:14px auto 0;font-size:12px;color:var(--ink-faint);text-decoration:underline;text-underline-offset:3px}
+
+/* welcome-back */
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));
+  max-width:440px;width:calc(100% - 28px);z-index:5;
+  background:var(--ink);color:var(--stone-0);border-radius:10px;padding:11px 14px;
+  display:flex;gap:10px;align-items:center;font-size:13px;box-shadow:0 10px 30px -10px rgba(0,0,0,.6);
+}
+.toast b{font-family:var(--f-num);color:var(--accent);font-weight:600}
+.toast button{margin-left:auto;font-size:12px;opacity:.7;padding:4px}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+@media (min-width:900px){
+  #app{max-width:1040px;display:grid;grid-template-columns:1.05fr .95fr;grid-template-rows:auto auto 1fr auto;
+       column-gap:22px;padding:14px 0 18px}
+  .topbar{grid-column:1/-1}
+  .readout{grid-column:1}
+  .rockwrap{grid-column:1;grid-row:3;margin:0 0 0 16px;min-height:0}
+  .coverage{grid-column:1;grid-row:4;padding-left:16px}
+  .tabs{grid-column:2;grid-row:2;padding-right:16px}
+  .panels{grid-column:2;grid-row:3/span 2;padding-right:16px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="wordmark">Lichen<em>.</em></div>
+    <div class="epoch">Epoch <b id="ep">I</b> · <b id="ringcount">0</b> rings</div>
+  </header>
+
+  <div class="readout">
+    <div class="biomass"><span id="biomass">0</span><small>biomass</small></div>
+    <div class="rate"><b id="rate">0</b> per second · <span id="tapval">1</span> per touch</div>
+  </div>
+
+  <div class="rockwrap" id="rockwrap">
+    <canvas id="rock"></canvas>
+    <div class="hint" id="hint">Touch the stone</div>
+  </div>
+
+  <div class="coverage">
+    <span>Coverage</span>
+    <div class="bar"><i id="covbar"></i></div>
+    <b id="covpct">0.0%</b>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-colonies" aria-selected="true" aria-controls="p-colonies">Colonies<span class="dot"></span></button>
+    <button role="tab" id="tab-adapt" aria-selected="false" aria-controls="p-adapt">Adaptations<span class="dot"></span></button>
+    <button role="tab" id="tab-glacier" aria-selected="false" aria-controls="p-glacier">Glacier<span class="dot"></span></button>
+  </nav>
+
+  <div class="panels" id="panels">
+    <section class="panel" id="p-colonies" role="tabpanel" aria-labelledby="tab-colonies">
+      <div class="buymode">
+        <em>Buy</em>
+        <button data-buy="1" aria-pressed="true">×1</button>
+        <button data-buy="10" aria-pressed="false">×10</button>
+        <button data-buy="max" aria-pressed="false">Max</button>
+      </div>
+      <div id="colonyList"></div>
+    </section>
+
+    <section class="panel" id="p-adapt" role="tabpanel" aria-labelledby="tab-adapt" hidden>
+      <div id="upgradeList"></div>
+    </section>
+
+    <section class="panel" id="p-glacier" role="tabpanel" aria-labelledby="tab-glacier" hidden>
+      <div class="glacier">
+        <h2>Let the ice through</h2>
+        <p>An ice sheet scrapes the boulder to bare rock. Everything you grew is gone — but the stone comes back scored with growth rings, and every ring makes the next colony faster forever.</p>
+        <div class="rings">
+          <div><span>Rings held</span><b id="g-have">0</b></div>
+          <div><span>Rings gained</span><b class="gain" id="g-gain">0</b></div>
+          <div><span>Bonus</span><b id="g-bonus">+0%</b></div>
+        </div>
+        <button class="scour" id="scour" disabled>Reach 1.00B biomass this epoch</button>
+        <button class="wipe" id="wipe">Erase this boulder and start from nothing</button>
+      </div>
+    </section>
+  </div>
+</div>
+<script>
+(function(){
+"use strict";
+
+/* ── the organisms ─────────────────────────────────────── */
+const GROWTH = 1.15;
+const COLONIES = [
+  {n:"Crustose Crust",   l:"Lecanora",                d:"Paint-thin. Bonded so hard it can't be peeled off.",      c:15,     r:0.12,  col:"#96A06B"},
+  {n:"Map Lichen",       l:"Rhizocarpon geographicum",d:"Grows a millimetre a century. Glaciers are dated by it.", c:140,    r:1.1,   col:"#C3D137"},
+  {n:"Foliose Frill",    l:"Parmelia sulcata",        d:"Leafy lobes that lift at the edge and comb the fog.",     c:1600,   r:8,     col:"#7E9C7A"},
+  {n:"Sunburst Rosette", l:"Xanthoria parietina",     d:"Feeds on nitrogen. Blazes orange where birds perch.",     c:19e3,   r:47,    col:"#E0902B"},
+  {n:"Rock Tripe",       l:"Umbilicaria",             d:"Leathery and bitter. Franklin's men ate it and lived.",   c:2.2e5,  r:260,   col:"#7A6355"},
+  {n:"Beard Lichen",     l:"Usnea",                   d:"Hangs in pale strands. Dies first when the air turns.",   c:2.6e6,  r:1400,  col:"#B9C7B0"},
+  {n:"Reindeer Cladonia",l:"Cladonia rangiferina",    d:"Springy grey thicket. Feeds an entire tundra.",           c:3.1e7,  r:7800,  col:"#D3D9CB"},
+  {n:"Firedot Colony",   l:"Caloplaca",               d:"Rust-red dots tracing every seep line on the face.",      c:3.9e8,  r:44e3,  col:"#C4472C"},
+  {n:"Endolith Vein",    l:"Cryptoendolith",          d:"Lives inside the stone, in the gaps between grains.",     c:5.2e9,  r:2.6e5, col:"#57A3A8"},
+  {n:"Symbiont Bloom",   l:"holobiont",               d:"Alga, fungus and yeast running as a single organism.",    c:7.5e10, r:1.6e6, col:"#9A7FC0"}
+];
+const UP = [
+  {id:"mist",  n:"Morning Mist",           d:"Dew collects overnight. Touch is worth twice as much.",   c:80,     k:"tap",     v:2,    req:s=>s.taps>=12},
+  {id:"acid",  n:"Acid Etching",           d:"Oxalic acid bites the feldspar. Crustose ×3.",            c:1200,   k:"col",t:0, v:3,    req:s=>s.own[0]>=12},
+  {id:"drip",  n:"Fog Drip",               d:"Water runs down the face on its own. Touch ×2.",          c:4e3,    k:"tap",     v:2,    req:s=>tot(s)>=15},
+  {id:"cart",  n:"Cartographer's Eye",     d:"You learn to read the borders. Map lichen ×3.",           c:1.4e4,  k:"col",t:1, v:3,    req:s=>s.own[1]>=12},
+  {id:"cyano", n:"Cyanobacterial Partner", d:"A second photobiont moves in. Everything ×1.5.",          c:4e4,    k:"glob",    v:1.5,  req:s=>tot(s)>=30},
+  {id:"lobe",  n:"Lobe Splitting",         d:"Each frond divides at the tip. Foliose ×3.",              c:1.6e5,  k:"col",t:2, v:3,    req:s=>s.own[2]>=12},
+  {id:"rain",  n:"Rainfall",               d:"Real weather, at last. Touch ×3.",                        c:6e5,    k:"tap",     v:3,    req:s=>s.own[1]>=10},
+  {id:"perch", n:"Perch Stones",           d:"Ravens roost here and fertilise. Sunburst ×3.",           c:1.8e6,  k:"col",t:3, v:3,    req:s=>s.own[3]>=12},
+  {id:"nitro", n:"Nitrogen Fixing",        d:"The colony makes its own fertiliser. Everything ×2.",     c:1.1e7,  k:"glob",    v:2,    req:s=>tot(s)>=75},
+  {id:"grip",  n:"Umbilicate Grip",        d:"One central holdfast, immovable. Rock tripe ×3.",         c:2.2e7,  k:"col",t:4, v:3,    req:s=>s.own[4]>=12},
+  {id:"storm", n:"Storm Front",            d:"Squalls sweep the ridge for days. Touch ×4.",             c:1.2e8,  k:"tap",     v:4,    req:s=>s.own[3]>=20},
+  {id:"clean", n:"Clean Air",              d:"The valley smelter closes. Beard lichen ×3.",             c:2.6e8,  k:"col",t:5, v:3,    req:s=>s.own[5]>=12},
+  {id:"frost", n:"Frost Cracking",         d:"Ice opens new surface every night. Everything ×2.",       c:2.9e9,  k:"glob",    v:2,    req:s=>tot(s)>=140},
+  {id:"mat",   n:"Tundra Mat",             d:"The ground itself becomes lichen. Cladonia ×3.",          c:3.6e9,  k:"col",t:6, v:3,    req:s=>s.own[6]>=12},
+  {id:"hyd",   n:"Hydration Curve",        d:"A touch now also draws 3% of a second's growth.",         c:8e9,    k:"taprate", v:0.03, req:s=>s.own[5]>=10},
+  {id:"seep",  n:"Seep Lines",             d:"Mineral water finds every crack. Firedot ×3.",            c:4.8e10, k:"col",t:7, v:3,    req:s=>s.own[7]>=12},
+  {id:"deep",  n:"Deep Vein Network",      d:"The stone is colonised through and through. Endolith ×3.",c:6e11,   k:"col",t:8, v:3,    req:s=>s.own[8]>=12},
+  {id:"myco",  n:"Mycobiont Rewrite",      d:"The fungus renegotiates the deal. Everything ×2.5.",      c:1.2e12, k:"glob",    v:2.5,  req:s=>s.rings>=3}
+];
+const ROMAN=["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"];
+
+/* ── state ─────────────────────────────────────────────── */
+const KEY="lichen.save.v1";
+const fresh=()=>({b:0, earned:0, ee:0, epoch:0, rings:0, taps:0,
+                  own:COLONIES.map(()=>0), ups:{}, seen:{}, t:Date.now()});
+let S=fresh();
+const tot=s=>s.own.reduce((a,b)=>a+b,0);
+
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY); if(!raw) return null;
+    const d=JSON.parse(raw);
+    S=Object.assign(fresh(),d);
+    S.own=COLONIES.map((_,i)=>(d.own&&d.own[i])||0);
+    S.ups=d.ups||{}; S.seen=d.seen||{};
+    return d.t||null;
+  }catch(e){ return null; }
+}
+function save(){ try{ S.t=Date.now(); localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+function grow(n){ S.b+=n; S.earned+=n; S.ee+=n; }
+
+/* ── maths ─────────────────────────────────────────────── */
+function globMult(){
+  let m=1+0.05*S.rings;
+  for(const u of UP) if(S.ups[u.id]&&u.k==="glob") m*=u.v;
+  return m;
+}
+function colMult(i){
+  let m=Math.pow(2,Math.floor(S.own[i]/25));
+  for(const u of UP) if(S.ups[u.id]&&u.k==="col"&&u.t===i) m*=u.v;
+  return m;
+}
+function rate(){
+  let r=0;
+  for(let i=0;i<COLONIES.length;i++) if(S.own[i]) r+=S.own[i]*COLONIES[i].r*colMult(i);
+  return r*globMult();
+}
+function tapPower(){
+  let m=1, pct=0;
+  for(const u of UP){ if(!S.ups[u.id]) continue; if(u.k==="tap") m*=u.v; if(u.k==="taprate") pct+=u.v; }
+  return m*globMult()+pct*rate();
+}
+function costOf(i,k){
+  const base=COLONIES[i].c*Math.pow(GROWTH,S.own[i]);
+  return base*(Math.pow(GROWTH,k)-1)/(GROWTH-1);
+}
+function maxAffordable(i){
+  const base=COLONIES[i].c*Math.pow(GROWTH,S.own[i]);
+  if(S.b<base) return 0;
+  return Math.max(1,Math.floor(Math.log(1+S.b*(GROWTH-1)/base)/Math.log(GROWTH)));
+}
+const SCOUR_MIN=1e9;
+const ringsFrom=e=>Math.floor(Math.sqrt(e/SCOUR_MIN));
+const coverage=()=>1-Math.exp(-tot(S)/220);
+
+const SUFFIX=["","K","M","B","T","Qa","Qi","Sx","Sp","Oc","No","Dc","UD","DD","TD"];
+function fmt(n){
+  if(!isFinite(n)) return "∞";
+  if(n<=0) return "0";
+  if(n<1000) return n<10 ? String(Math.round(n*10)/10).replace(/\.0$/,"") : String(Math.floor(n));
+  const t=Math.min(Math.floor(Math.log10(n)/3),SUFFIX.length-1);
+  const v=n/Math.pow(1000,t);
+  return (v<10?v.toFixed(2):v<100?v.toFixed(1):String(Math.floor(v)))+SUFFIX[t];
+}
+
+/* ── the boulder ───────────────────────────────────────── */
+const cv=document.getElementById("rock"), ctx=cv.getContext("2d");
+const wrap=document.getElementById("rockwrap"), hint=document.getElementById("hint");
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+let W=1,H=1,DPR=1,cx=0,cy=0,rr=1,blobPts=[],rockCanvas=null,ripples=[],dirty=true;
+
+function rnd(seed){ let a=seed>>>0; return function(){
+  a=(a+0x6D2B79F5)>>>0; let t=Math.imul(a^a>>>15,1|a);
+  t=(t+Math.imul(t^t>>>7,61|t))^t; return ((t^t>>>14)>>>0)/4294967296; };}
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+function blobPath(c){
+  c.beginPath();
+  const n=blobPts.length, px=i=>cx+Math.cos(blobPts[i%n].a)*blobPts[i%n].r,
+        py=i=>cy+Math.sin(blobPts[i%n].a)*blobPts[i%n].r*0.9;
+  c.moveTo((px(n-1)+px(0))/2,(py(n-1)+py(0))/2);
+  for(let i=0;i<n;i++) c.quadraticCurveTo(px(i),py(i),(px(i)+px(i+1))/2,(py(i)+py(i+1))/2);
+  c.closePath();
+}
+function buildRock(){
+  rockCanvas=document.createElement("canvas");
+  rockCanvas.width=Math.round(W*DPR); rockCanvas.height=Math.round(H*DPR);
+  const c=rockCanvas.getContext("2d"); c.setTransform(DPR,0,0,DPR,0,0);
+  c.save(); c.shadowColor="rgba(0,0,0,.35)"; c.shadowBlur=18; c.shadowOffsetY=6;
+  blobPath(c); c.fillStyle=css("--rock-b"); c.fill(); c.restore();
+  blobPath(c); c.save(); c.clip();
+  const g=c.createLinearGradient(cx-rr,cy-rr,cx+rr,cy+rr);
+  g.addColorStop(0,css("--rock-a")); g.addColorStop(1,css("--rock-b"));
+  c.fillStyle=g; c.fillRect(0,0,W,H);
+  const r=rnd(21);
+  for(let i=0;i<1500;i++){
+    const x=r()*W, y=r()*H, s=r()*1.7+0.3;
+    c.fillStyle = r()>0.5 ? "rgba(255,255,255,0.055)" : "rgba(0,0,0,0.085)";
+    c.fillRect(x,y,s,s);
+  }
+  c.strokeStyle=css("--rock-line"); c.globalAlpha=.45; c.lineWidth=1;
+  for(let i=0;i<5;i++){
+    c.beginPath(); let x=r()*W, y=r()*H; c.moveTo(x,y);
+    for(let j=0;j<4;j++){ x+=(r()-0.5)*W*0.45; y+=(r()-0.5)*H*0.45; c.lineTo(x,y); }
+    c.stroke();
+  }
+  c.restore(); c.globalAlpha=1;
+  blobPath(c); c.strokeStyle=css("--rock-line"); c.lineWidth=1.5; c.stroke();
+}
+function layout(){
+  const b=wrap.getBoundingClientRect();
+  if(b.width<2||b.height<2) return;
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  W=Math.round(b.width); H=Math.round(b.height);
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  cx=W/2; cy=H/2; rr=Math.min(W*0.94,H)*0.48;
+  const g=rnd(7); blobPts=[];
+  for(let i=0;i<14;i++) blobPts.push({a:i/14*Math.PI*2, r:rr*(0.82+g()*0.3)});
+  buildRock(); dirty=true;
+}
+
+const BLOTCH=18;
+const patches=COLONIES.map((C,i)=>{
+  const g=rnd(101+i*37), out=[];
+  for(let j=0;j<BLOTCH;j++){
+    const lumps=[];
+    for(let k=0;k<5;k++) lumps.push({dx:(g()-0.5)*1.5, dy:(g()-0.5)*1.5, s:0.5+g()*0.6});
+    out.push({a:g()*Math.PI*2, d:Math.sqrt(g())*0.76, lumps, seed:g(), cur:0});
+  }
+  return out;
+});
+function targetR(i,j){
+  const c=S.own[i];
+  if(c<=j) return 0;
+  const grow=Math.min(1,(c-j)/14);
+  return rr*(0.042+0.07*grow)*(0.75+patches[i][j].seed*0.5);
+}
+function draw(){
+  let moving=false;
+  ctx.clearRect(0,0,W,H);
+  if(rockCanvas) ctx.drawImage(rockCanvas,0,0,W,H);
+  ctx.save(); blobPath(ctx); ctx.clip();
+  for(let i=0;i<COLONIES.length;i++){
+    const col=COLONIES[i].col;
+    for(let j=0;j<BLOTCH;j++){
+      const p=patches[i][j], t=targetR(i,j);
+      if(Math.abs(t-p.cur)>0.2){ p.cur = reduce ? t : p.cur+(t-p.cur)*0.08; moving=true; }
+      if(p.cur<0.5) continue;
+      const x=cx+Math.cos(p.a)*p.d*rr, y=cy+Math.sin(p.a)*p.d*rr*0.9;
+      ctx.globalAlpha=.82; ctx.fillStyle=col;
+      for(const l of p.lumps){
+        ctx.beginPath(); ctx.arc(x+l.dx*p.cur, y+l.dy*p.cur, p.cur*l.s, 0, 6.2832); ctx.fill();
+      }
+      ctx.globalAlpha=.16; ctx.fillStyle="#fff";
+      ctx.beginPath(); ctx.arc(x-p.cur*0.3, y-p.cur*0.34, p.cur*0.26, 0, 6.2832); ctx.fill();
+    }
+  }
+  ctx.globalAlpha=1;
+  if(ripples.length){
+    ctx.strokeStyle=css("--accent"); ctx.lineWidth=2;
+    for(const rp of ripples){
+      const k=rp.t/520;
+      ctx.globalAlpha=(1-k)*0.65;
+      ctx.beginPath(); ctx.arc(rp.x,rp.y,8+k*48,0,6.2832); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha=1; ctx.restore();
+  if(moving) dirty=true;
+}
+
+let last=performance.now(), acc=0;
+function frame(now){
+  const dt=Math.min(0.25,(now-last)/1000); last=now;
+  const r=rate(); if(r>0) grow(r*dt);
+  if(ripples.length){
+    for(const rp of ripples) rp.t+=dt*1000;
+    ripples=ripples.filter(rp=>rp.t<520); dirty=true;
+  }
+  acc+=dt;
+  if(acc>0.033){ acc=0; if(dirty){ dirty=false; draw(); } }
+  requestAnimationFrame(frame);
+}
+
+wrap.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  const b=wrap.getBoundingClientRect(), x=e.clientX-b.left, y=e.clientY-b.top;
+  const gain=tapPower(); grow(gain); S.taps++;
+  if(!reduce) ripples.push({x,y,t:0});
+  dirty=true;
+  const f=document.createElement("div");
+  f.className="float"; f.textContent="+"+fmt(gain);
+  f.style.left=x+"px"; f.style.top=(y-10)+"px";
+  wrap.appendChild(f); setTimeout(()=>f.remove(),950);
+  if(S.taps>4) hint.style.opacity="0";
+  paintNumbers();
+});
+
+/* ── lists ─────────────────────────────────────────────── */
+let buyMode=1;
+const colonyList=document.getElementById("colonyList");
+const upgradeList=document.getElementById("upgradeList");
+const rows=[];
+let upSig="";
+
+function swatch(i,colour){
+  const s=document.createElement("div"); s.className="swatch";
+  const g=rnd(500+i*13);
+  for(let k=0;k<4;k++){
+    const d=document.createElement("i"), sz=8+g()*13;
+    d.style.width=sz+"px"; d.style.height=sz+"px";
+    d.style.left=g()*(34-sz)+"px"; d.style.top=g()*(34-sz)+"px";
+    d.style.background=colour;
+    s.appendChild(d);
+  }
+  return s;
+}
+function buildColonies(){
+  COLONIES.forEach((C,i)=>{
+    const b=document.createElement("button");
+    b.className="card"; b.hidden=true; b.type="button";
+    b.appendChild(swatch(i,C.col));
+    const mid=document.createElement("div");
+    mid.innerHTML='<h3></h3><p class="latin"></p><p class="desc"></p><span class="tag" hidden></span>';
+    mid.querySelector("h3").textContent=C.n;
+    mid.querySelector(".latin").textContent=C.l;
+    mid.querySelector(".desc").textContent=C.d;
+    b.appendChild(mid);
+    const right=document.createElement("div"); right.className="right";
+    right.innerHTML='<span class="cost"></span><span class="own">owned <b>0</b></span><span class="own each"></span>';
+    b.appendChild(right);
+    b.addEventListener("click",()=>buy(i));
+    colonyList.appendChild(b);
+    rows.push({el:b, cost:right.querySelector(".cost"), own:right.querySelector(".own b"),
+               each:right.querySelector(".each"), tag:mid.querySelector(".tag")});
+  });
+}
+function buy(i){
+  const k = buyMode==="max" ? maxAffordable(i) : buyMode;
+  if(k<1) return;
+  const c=costOf(i,k);
+  if(S.b<c) return;
+  S.b-=c; S.own[i]+=k; dirty=true;
+  paintNumbers(); paintLists(); save();
+}
+function upColour(u){ return u.k==="col" ? COLONIES[u.t].col : u.k==="glob" ? "var(--accent)" : "var(--warm)"; }
+
+function paintLists(){
+  const gm=globMult();
+  COLONIES.forEach((C,i)=>{
+    const R=rows[i];
+    if(!S.seen["c"+i] && (i===0 || S.own[i]>0 || S.b>=C.c*0.35 || S.own[i-1]>=3)){
+      S.seen["c"+i]=1; flagTab("colonies");
+    }
+    if(!S.seen["c"+i]){ R.el.hidden=true; return; }
+    R.el.hidden=false;
+    const k = buyMode==="max" ? Math.max(1,maxAffordable(i)) : buyMode;
+    const c=costOf(i,k), can=S.b>=c;
+    R.cost.textContent=fmt(c)+(k>1?" ×"+k:"");
+    R.own.textContent=S.own[i];
+    R.each.textContent=fmt(C.r*colMult(i)*gm)+"/s each";
+    R.el.classList.toggle("can",can);
+    R.el.disabled=!can;
+    const next=(Math.floor(S.own[i]/25)+1)*25;
+    R.tag.hidden=S.own[i]<5;
+    R.tag.textContent="×2 at "+next+" · "+(next-S.own[i])+" to go";
+  });
+
+  const avail=UP.filter(u=>!S.ups[u.id]&&u.req(S));
+  const held=UP.filter(u=>S.ups[u.id]);
+  for(const u of avail) if(!S.seen["u"+u.id]){ S.seen["u"+u.id]=1; flagTab("adapt"); }
+  const sig=avail.map(u=>u.id).join()+"|"+held.map(u=>u.id).join();
+  if(sig!==upSig){
+    upSig=sig;
+    upgradeList.textContent="";
+    if(!avail.length){
+      const e=document.createElement("div"); e.className="empty";
+      e.innerHTML="<em>Nothing new is possible yet.</em>Adaptations appear as colonies take hold. Keep growing.";
+      upgradeList.appendChild(e);
+    }
+    for(const u of avail){
+      const b=document.createElement("button");
+      b.className="card"; b.type="button"; b.dataset.up=u.id;
+      const sw=swatch(40+UP.indexOf(u),upColour(u));
+      const mid=document.createElement("div");
+      mid.innerHTML="<h3></h3><p></p>";
+      mid.querySelector("h3").textContent=u.n; mid.querySelector("p").textContent=u.d;
+      const right=document.createElement("div"); right.className="right";
+      right.innerHTML='<span class="cost"></span>';
+      right.querySelector(".cost").textContent=fmt(u.c);
+      b.append(sw,mid,right);
+      b.addEventListener("click",()=>{
+        if(S.ups[u.id]||S.b<u.c) return;
+        S.b-=u.c; S.ups[u.id]=1; paintNumbers(); paintLists(); save();
+      });
+      upgradeList.appendChild(b);
+    }
+    if(held.length){
+      const h=document.createElement("div"); h.className="buymode"; h.style.paddingTop="10px";
+      h.innerHTML="<em></em>"; h.querySelector("em").textContent="Held · "+held.length;
+      upgradeList.appendChild(h);
+      for(const u of held){
+        const d=document.createElement("div"); d.className="card"; d.style.opacity=".55"; d.style.boxShadow="none";
+        const sw=swatch(40+UP.indexOf(u),upColour(u));
+        const mid=document.createElement("div"); mid.innerHTML="<h3></h3><p></p>";
+        mid.querySelector("h3").textContent=u.n; mid.querySelector("p").textContent=u.d;
+        const right=document.createElement("div"); right.className="right";
+        d.append(sw,mid,right); upgradeList.appendChild(d);
+      }
+    }
+  }
+  upgradeList.querySelectorAll("[data-up]").forEach(el=>{
+    const u=UP.find(x=>x.id===el.dataset.up);
+    const can=S.b>=u.c;
+    el.classList.toggle("can",can); el.disabled=!can;
+  });
+
+  const gain=ringsFrom(S.ee);
+  document.getElementById("g-have").textContent=S.rings;
+  document.getElementById("g-gain").textContent=gain;
+  document.getElementById("g-bonus").textContent="+"+(S.rings*5)+"%";
+  const btn=document.getElementById("scour");
+  btn.disabled=gain<1;
+  btn.textContent = gain<1
+    ? "Reach "+fmt(SCOUR_MIN)+" biomass this epoch"
+    : "Scour the boulder · +"+gain+" ring"+(gain===1?"":"s");
+}
+function flagTab(which){
+  const t=document.getElementById("tab-"+which);
+  if(t && t.getAttribute("aria-selected")==="false") t.classList.add("has-new");
+}
+function paintNumbers(){
+  document.getElementById("biomass").textContent=fmt(S.b);
+  document.getElementById("rate").textContent=fmt(rate());
+  document.getElementById("tapval").textContent=fmt(tapPower());
+  document.getElementById("ep").textContent=ROMAN[Math.min(S.epoch,19)];
+  document.getElementById("ringcount").textContent=S.rings;
+  const cov=coverage()*100;
+  document.getElementById("covbar").style.width=cov.toFixed(1)+"%";
+  document.getElementById("covpct").textContent=cov.toFixed(1)+"%";
+}
+
+/* ── tabs & controls ───────────────────────────────────── */
+const TABS=[["colonies","p-colonies"],["adapt","p-adapt"],["glacier","p-glacier"]];
+TABS.forEach(([id])=>{
+  document.getElementById("tab-"+id).addEventListener("click",()=>{
+    TABS.forEach(([i2,p2])=>{
+      const t=document.getElementById("tab-"+i2), on=i2===id;
+      t.setAttribute("aria-selected",on?"true":"false");
+      if(on) t.classList.remove("has-new");
+      document.getElementById(p2).hidden=!on;
+    });
+    document.getElementById("panels").scrollTop=0;
+  });
+});
+document.querySelectorAll("[data-buy]").forEach(b=>{
+  b.addEventListener("click",()=>{
+    document.querySelectorAll("[data-buy]").forEach(o=>o.setAttribute("aria-pressed","false"));
+    b.setAttribute("aria-pressed","true");
+    buyMode = b.dataset.buy==="max" ? "max" : parseInt(b.dataset.buy,10);
+    paintLists();
+  });
+});
+document.getElementById("scour").addEventListener("click",()=>{
+  const gain=ringsFrom(S.ee);
+  if(gain<1) return;
+  S.rings+=gain; S.epoch++; S.b=0; S.ee=0;
+  S.own=COLONIES.map(()=>0); S.ups={}; S.seen={};
+  patches.forEach(ps=>ps.forEach(p=>p.cur=0));
+  upSig=""; dirty=true;
+  paintNumbers(); paintLists(); save();
+  document.getElementById("tab-colonies").click();
+  toast("The ice passes. The stone is bare — and scored with <b>"+S.rings+"</b> rings.");
+});
+document.getElementById("wipe").addEventListener("click",()=>{
+  if(!confirm("Erase everything, rings included? This cannot be undone.")) return;
+  S=fresh();
+  patches.forEach(ps=>ps.forEach(p=>p.cur=0));
+  upSig=""; dirty=true;
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  paintNumbers(); paintLists();
+  hint.style.opacity="1";
+  document.getElementById("tab-colonies").click();
+});
+function toast(html){
+  const t=document.createElement("div"); t.className="toast";
+  const d=document.createElement("div"); d.innerHTML=html;
+  const b=document.createElement("button"); b.textContent="Close"; b.setAttribute("aria-label","Dismiss");
+  b.addEventListener("click",()=>t.remove());
+  t.append(d,b); document.body.appendChild(t);
+  setTimeout(()=>{ if(t.isConnected) t.remove(); },9000);
+}
+
+/* ── boot ──────────────────────────────────────────────── */
+const savedAt=load();
+if(savedAt){
+  const away=Math.min(8*3600,(Date.now()-savedAt)/1000), r=rate();
+  if(r>0 && away>60){
+    const g=r*away*0.5; grow(g);
+    toast("While you were away the colony added <b>"+fmt(g)+"</b> biomass.");
+  }
+}
+if(S.taps>4) hint.style.opacity="0";
+
+buildColonies();
+layout();
+paintNumbers();
+paintLists();
+new ResizeObserver(layout).observe(wrap);
+addEventListener("orientationchange",()=>setTimeout(layout,180));
+const mq=matchMedia("(prefers-color-scheme: dark)");
+(mq.addEventListener?mq.addEventListener.bind(mq,"change"):mq.addListener.bind(mq))(()=>{ buildRock(); dirty=true; });
+requestAnimationFrame(frame);
+setInterval(()=>{ paintNumbers(); paintLists(); },250);
+setInterval(save,5000);
+addEventListener("visibilitychange",()=>{ if(document.hidden) save(); else last=performance.now(); });
+addEventListener("pagehide",save);
+})();
+</script>
+</body>
+</html>
